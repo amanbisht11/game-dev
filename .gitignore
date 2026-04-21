@@ -48,7 +48,7 @@ app.*.map.json
 # Firebase related
 # google-services.json contains project-specific keys. 
 # If you want to keep it private, uncomment the lines below.
-# android/app/google-services.json
+android/app/google-services.json
 # ios/Runner/GoogleService-Info.plist
 
 # Web related
