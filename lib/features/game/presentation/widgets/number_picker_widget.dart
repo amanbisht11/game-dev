@@ -16,6 +16,8 @@ class NumberPickerWidget extends ConsumerStatefulWidget {
 }
 
 class _NumberPickerWidgetState extends ConsumerState<NumberPickerWidget> with SingleTickerProviderStateMixin {
+  static const _timerDuration = 10; // seconds
+
   int? _selectedNumber;
   bool _submitted = false;
   late AnimationController _timerController;
@@ -26,7 +28,7 @@ class _NumberPickerWidgetState extends ConsumerState<NumberPickerWidget> with Si
     super.initState();
     _timerController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      duration: const Duration(seconds: _timerDuration),
     );
     
     _timerController.addStatusListener((status) {
@@ -66,6 +68,26 @@ class _NumberPickerWidgetState extends ConsumerState<NumberPickerWidget> with Si
     super.dispose();
   }
 
+  int get _currentBallCounter {
+    // Read the ballCounter from the room data (stored in RTDB)
+    // We need to get it from a field — since RoomModel might not have it,
+    // we fallback to computing it from inning state.
+    // The game_repository sets this as 'ballCounter' in the room.
+    // For now, use currentInning * 6 + currentBall as an approximation
+    // that matches the actual ballCounter.
+    return _getBallCounterFromRoom();
+  }
+
+  int _getBallCounterFromRoom() {
+    // Count total balls played across all innings + current ball position
+    int total = 0;
+    for (int i = 0; i < widget.room.currentInning && i < widget.room.innings.length; i++) {
+      total += widget.room.innings[i].ballsPlayed;
+    }
+    total += widget.room.currentBall;
+    return total;
+  }
+
   void _autoSelectNumber() {
     // Timeout = wide ball, submit 0 as the "wide" signal
     if (_submitted) return;
@@ -81,7 +103,7 @@ class _NumberPickerWidgetState extends ConsumerState<NumberPickerWidget> with Si
     final amIBatting = currentInning?.battingPlayer == myRole;
     final role = amIBatting ? 'batsman' : 'bowler';
     
-    ref.read(gameRepositoryProvider).submitBallChoice(widget.roomCode, role, 0);
+    ref.read(gameRepositoryProvider).submitBallChoice(widget.roomCode, role, 0, _currentBallCounter);
   }
 
   void _selectNumber(int number) {
@@ -101,7 +123,7 @@ class _NumberPickerWidgetState extends ConsumerState<NumberPickerWidget> with Si
     final amIBatting = currentInning?.battingPlayer == myRole;
     final role = amIBatting ? 'batsman' : 'bowler';
     
-    ref.read(gameRepositoryProvider).submitBallChoice(widget.roomCode, role, number);
+    ref.read(gameRepositoryProvider).submitBallChoice(widget.roomCode, role, number, _currentBallCounter);
   }
 
   @override
@@ -168,7 +190,7 @@ class _NumberPickerWidgetState extends ConsumerState<NumberPickerWidget> with Si
                       ),
                     ),
                     Text(
-                      (5 - (_timerController.value * 5)).ceil().toString(),
+                      (_timerDuration - (_timerController.value * _timerDuration)).ceil().toString(),
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ],

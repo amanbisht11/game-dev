@@ -18,7 +18,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _nameController = TextEditingController();
   String? _selectedCountryCode;
   String? _selectedCountryName;
+  String? _selectedTeam;
   bool _isLoading = false;
+
+  final List<String> _iplTeams = [
+    'CSK', 'RCB', 'MI', 'KKR', 'SRH', 'RR', 'DC', 'PBKS', 'LSG', 'GT'
+  ];
 
   @override
   void initState() {
@@ -28,6 +33,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _nameController.text = profile.name;
       _selectedCountryCode = profile.country;
       _selectedCountryName = profile.country;
+      _selectedTeam = profile.favoriteTeam;
     }
   }
 
@@ -54,6 +60,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           uid: user.uid,
           name: _nameController.text.trim(),
           country: _selectedCountryCode ?? currentProfile.country,
+          favoriteTeam: _selectedTeam,
           avatarUrl: currentProfile.avatarUrl,
           level: currentProfile.level,
           xp: currentProfile.xp,
@@ -153,6 +160,36 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         ),
                         const Icon(Icons.arrow_drop_down),
                       ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Favorite Team
+                InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Favorite IPL Team',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.sports_cricket),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedTeam,
+                      dropdownColor: AppColors.surfaceDark,
+                      isExpanded: true,
+                      items: _iplTeams.map((team) {
+                        return DropdownMenuItem(
+                          value: team,
+                          child: Text(team),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedTeam = value;
+                        });
+                      },
                     ),
                   ),
                 ),

@@ -15,15 +15,33 @@ import 'features/game/presentation/result_screen.dart';
 import 'features/settings/presentation/settings_screen.dart';
 import 'features/settings/presentation/edit_profile_screen.dart';
 
+/// Notifier that tells GoRouter to re-evaluate redirects
+/// without recreating the entire router instance.
+class _RouterNotifier extends ChangeNotifier {
+  _RouterNotifier(Ref ref) {
+    ref.listen(authStateProvider, (prev, next) => notifyListeners());
+    ref.listen(userProfileProvider, (prev, next) => notifyListeners());
+  }
+}
+
+final _routerNotifierProvider = Provider<_RouterNotifier>((ref) {
+  return _RouterNotifier(ref);
+});
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
-  final profileState = ref.watch(userProfileProvider);
+  final notifier = ref.watch(_routerNotifierProvider);
 
   return GoRouter(
     initialLocation: AppRoutes.login,
+    refreshListenable: notifier,
     redirect: (context, state) {
+      // Use ref.read (not watch) inside redirect — the refreshListenable
+      // handles re-triggering when auth/profile changes.
+      final authState = ref.read(authStateProvider);
+      final profileState = ref.read(userProfileProvider);
+
       final user = authState.value;
-      
+
       if (authState.isLoading) return null;
 
       final isLoggingIn = state.matchedLocation == AppRoutes.login;

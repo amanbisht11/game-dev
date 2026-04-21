@@ -39,7 +39,7 @@ class ScoreboardWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'INNING ${currentInningIndex + 1} / 5',
+              'INNING ${currentInningIndex + 1} / 2',
               style: TextStyle(color: AppColors.accentGold, fontWeight: FontWeight.bold, letterSpacing: 2, fontSize: 12),
             ),
             const SizedBox(height: 12),

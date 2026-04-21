@@ -77,57 +77,66 @@ class DashboardScreen extends ConsumerWidget {
                       const SizedBox(height: 28),
 
                       // Welcome card
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.player1Blue.withValues(alpha: 0.2), AppColors.surfaceDark],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => context.push('/profile'),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.player1Blue.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Welcome back,',
-                                    style: TextStyle(color: AppColors.textGrey, fontSize: 14),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    profile.name,
-                                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.accentGold.withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      'Level ${profile.level} • ${profile.xp} XP',
-                                      style: const TextStyle(color: AppColors.accentGold, fontSize: 12, fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                ],
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [AppColors.player1Blue.withValues(alpha: 0.2), AppColors.surfaceDark],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.player1Blue.withValues(alpha: 0.2)),
                             ),
-                            CircleAvatar(
-                              radius: 32,
-                              backgroundColor: AppColors.player1Blue.withValues(alpha: 0.3),
-                              child: Text(
-                                profile.name.isNotEmpty ? profile.name[0].toUpperCase() : '?',
-                                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-                              ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 32,
+                                  backgroundColor: AppColors.player1Blue.withValues(alpha: 0.3),
+                                  child: Text(
+                                    profile.name.isNotEmpty ? profile.name[0].toUpperCase() : '?',
+                                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Welcome back,',
+                                        style: TextStyle(color: AppColors.textGrey, fontSize: 14),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        profile.name,
+                                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.accentGold.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          'Level ${profile.level} • ${profile.xp} XP',
+                                          style: const TextStyle(color: AppColors.accentGold, fontSize: 12, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.chevron_right, color: AppColors.textGrey),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ).animate().fadeIn(delay: 100.ms, duration: 400.ms).slideY(begin: 0.1, end: 0),
 

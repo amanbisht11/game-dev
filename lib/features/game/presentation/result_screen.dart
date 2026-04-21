@@ -1,19 +1,100 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../lobby/data/room_repository.dart';
-
+import '../../lobby/domain/room_model.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../profile/data/profile_repository.dart';
+import '../data/game_repository.dart';
 
-class ResultScreen extends ConsumerWidget {
+class ResultScreen extends ConsumerStatefulWidget {
   final String roomCode;
   const ResultScreen({super.key, required this.roomCode});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final roomAsync = ref.watch(roomStreamProvider(roomCode));
+  ConsumerState<ResultScreen> createState() => _ResultScreenState();
+}
+
+class _ResultScreenState extends ConsumerState<ResultScreen> {
+  bool _statsUpdated = false;
+  bool _waitingForRematch = false;
+  String? _rematchRoomCode;
+  Timer? _rematchTimer;
+  StreamSubscription? _rematchSub;
+  StreamSubscription? _rematchRoomSub;
+
+  @override
+  void dispose() {
+    _rematchTimer?.cancel();
+    _rematchSub?.cancel();
+    _rematchRoomSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _handlePlayAgain(RoomModel room) async {
+    final currentUser = ref.read(authStateProvider).value;
+    if (currentUser == null) return;
+
+    setState(() => _waitingForRematch = true);
+
+    final isPlayer1 = currentUser.uid == room.player1?.uid;
+    final myPlayer = isPlayer1 ? room.player1 : room.player2;
+    if (myPlayer == null) return;
+
+    final host = PlayerModel(uid: myPlayer.uid, name: myPlayer.name, avatarUrl: myPlayer.avatarUrl);
+    final repo = ref.read(roomRepositoryProvider);
+
+    // Check if the other player already created a rematch room
+    final existingRematchCode = await ref.read(roomRepositoryProvider)
+        .watchRematchCode(widget.roomCode)
+        .first;
+
+    if (existingRematchCode != null) {
+      // Other player already waiting — join their room
+      await repo.joinRoom(existingRematchCode, host);
+      // Auto-start the game since both players are ready
+      await ref.read(gameRepositoryProvider).startGame(existingRematchCode);
+      if (mounted) {
+        context.go('/game/$existingRematchCode');
+      }
+      return;
+    }
+
+    // I'm the first to tap Play Again — create a rematch room
+    final newRoomCode = await repo.createRematchRoom(widget.roomCode, host);
+    setState(() => _rematchRoomCode = newRoomCode);
+
+    // Watch for the other player joining
+    _rematchRoomSub = repo.watchRoom(newRoomCode).listen((rematchRoom) {
+      if (rematchRoom != null && rematchRoom.player2 != null && mounted) {
+        _rematchTimer?.cancel();
+        // Other player joined! Start the game.
+        ref.read(gameRepositoryProvider).startGame(newRoomCode).then((_) {
+          if (mounted) context.go('/game/$newRoomCode');
+        });
+      }
+    });
+
+    // 20 second timeout
+    _rematchTimer = Timer(const Duration(seconds: 20), () {
+      if (mounted && _waitingForRematch) {
+        _rematchRoomSub?.cancel();
+        // Clean up the room we created
+        repo.deleteRoom(newRoomCode);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No opponent found. Returning home.')),
+        );
+        context.go('/dashboard');
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final roomAsync = ref.watch(roomStreamProvider(widget.roomCode));
 
     return Scaffold(
       body: roomAsync.when(
@@ -33,6 +114,19 @@ class ResultScreen extends ConsumerWidget {
 
           final iWon = room.winner == myRole;
           final isDraw = room.winner == null;
+
+          // Update stats once when game is finished
+          if (room.status == 'finished' && !_statsUpdated && currentUser != null) {
+            _statsUpdated = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ref.read(profileRepositoryProvider).updateStats(
+                uid: currentUser.uid,
+                roomCode: widget.roomCode,
+                won: iWon,
+                xpGained: iWon ? 50 : (isDraw ? 20 : 10),
+              );
+            });
+          }
 
           return Container(
             width: double.infinity,
@@ -91,7 +185,6 @@ class ResultScreen extends ConsumerWidget {
                                   score: myScore,
                                   color: AppColors.player1Blue,
                                   isWinner: iWon,
-                                  label: 'YOU',
                                 ),
                               ),
                               Container(
@@ -104,7 +197,6 @@ class ResultScreen extends ConsumerWidget {
                                   score: oppScore,
                                   color: AppColors.player2Red,
                                   isWinner: !iWon && !isDraw,
-                                  label: 'OPP',
                                 ),
                               ),
                             ],
@@ -165,36 +257,78 @@ class ResultScreen extends ConsumerWidget {
 
                         const SizedBox(height: 40),
 
-                        // Actions
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => context.go('/dashboard'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.player1Blue,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        // Rematch waiting state
+                        if (_waitingForRematch)
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceDark,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.accentGold.withValues(alpha: 0.3)),
                             ),
-                            child: const Text('BACK TO HOME', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
-                          ),
-                        ).animate().fadeIn(delay: 1000.ms, duration: 500.ms),
-
-                        const SizedBox(height: 12),
-
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: () => context.go('/lobby'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.accentGold,
-                              side: const BorderSide(color: AppColors.accentGold),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            child: Column(
+                              children: [
+                                const CircularProgressIndicator(color: AppColors.accentGold),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'WAITING FOR OPPONENT...',
+                                  style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1, color: AppColors.accentGold),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Auto-return to home in 20 seconds',
+                                  style: TextStyle(color: AppColors.textGrey, fontSize: 12),
+                                ),
+                                const SizedBox(height: 16),
+                                TextButton(
+                                  onPressed: () {
+                                    _rematchTimer?.cancel();
+                                    _rematchRoomSub?.cancel();
+                                    if (_rematchRoomCode != null) {
+                                      ref.read(roomRepositoryProvider).deleteRoom(_rematchRoomCode!);
+                                    }
+                                    setState(() => _waitingForRematch = false);
+                                  },
+                                  child: const Text('CANCEL', style: TextStyle(color: AppColors.player2Red)),
+                                ),
+                              ],
                             ),
-                            child: const Text('PLAY AGAIN', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
-                          ),
-                        ).animate().fadeIn(delay: 1100.ms, duration: 500.ms),
+                          ).animate().fadeIn(duration: 300.ms)
+                        else ...[
+                          // Play Again button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _handlePlayAgain(room),
+                              icon: const Icon(Icons.replay),
+                              label: const Text('PLAY AGAIN', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accentGold,
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ).animate().fadeIn(delay: 1000.ms, duration: 500.ms),
+
+                          const SizedBox(height: 12),
+
+                          // Back to home
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => context.go('/dashboard'),
+                              icon: const Icon(Icons.home),
+                              label: const Text('BACK TO HOME', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white70,
+                                side: const BorderSide(color: Colors.white24),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ).animate().fadeIn(delay: 1100.ms, duration: 500.ms),
+                        ],
                       ],
                     ),
                   );
@@ -215,9 +349,8 @@ class _PlayerScoreCard extends StatelessWidget {
   final int score;
   final Color color;
   final bool isWinner;
-  final String label;
 
-  const _PlayerScoreCard({required this.name, required this.score, required this.color, required this.isWinner, required this.label});
+  const _PlayerScoreCard({required this.name, required this.score, required this.color, required this.isWinner});
 
   @override
   Widget build(BuildContext context) {

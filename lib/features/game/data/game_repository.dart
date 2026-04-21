@@ -65,6 +65,7 @@ class GameRepository {
       'toss/choice': choice,
       'currentInning': 0,
       'currentBall': 0,
+      'ballCounter': 0,
       'scores': {'player1': 0, 'player2': 0},
       'innings': [
         InningModel(
@@ -80,23 +81,37 @@ class GameRepository {
     });
   }
 
-  /// Submit a number choice for current ball — uses transaction to prevent race conditions
-  Future<void> submitBallChoice(String roomCode, String playerRole, int choice) async {
+  /// Submit a number choice for current ball — uses transaction to prevent race conditions.
+  /// [expectedBallCounter] ensures the choice is applied to the correct ball.
+  Future<void> submitBallChoice(String roomCode, String playerRole, int choice, int expectedBallCounter) async {
     final field = playerRole == 'batsman' ? 'batsmanChoice' : 'bowlerChoice';
     
-    debugPrint('[GameRepo] submitBallChoice: $playerRole picked $choice');
+    debugPrint('[GameRepo] submitBallChoice: $playerRole picked $choice for ball#$expectedBallCounter');
 
-    // Use a transaction on the entire room to atomically check and resolve
     final roomRef = _db.ref('rooms/$roomCode');
     
     await roomRef.runTransaction((Object? currentData) {
       if (currentData == null) return Transaction.abort();
       
       final data = Map<String, dynamic>.from(currentData as Map);
+      
+      // Validate the ball hasn't moved on (prevents stale retries)
+      final currentBallCounter = data['ballCounter'] as int? ?? 0;
+      if (currentBallCounter != expectedBallCounter) {
+        debugPrint('[GameRepo] STALE submission: expected ball#$expectedBallCounter but current is ball#$currentBallCounter. Aborting.');
+        return Transaction.abort();
+      }
+      
       final ballState = data['currentBallState'];
       if (ballState == null) return Transaction.abort();
       
       final ballStateMap = Map<String, dynamic>.from(ballState as Map);
+      
+      // Don't overwrite if our field is already set (prevents double-submit)
+      if (ballStateMap[field] != null) {
+        debugPrint('[GameRepo] $field already set, skipping.');
+        return Transaction.abort();
+      }
       
       // Set our choice
       ballStateMap[field] = choice;
@@ -107,7 +122,7 @@ class GameRepository {
       
       // If both choices are in, resolve the ball right here in the transaction
       if (batsmanChoice != null && bowlerChoice != null) {
-        debugPrint('[GameRepo] Both picked! Batsman: $batsmanChoice, Bowler: $bowlerChoice');
+        debugPrint('[GameRepo] Both picked! Batsman: $batsmanChoice, Bowler: $bowlerChoice — resolving ball#$currentBallCounter');
         _resolveBallInTransaction(data, batsmanChoice as int, bowlerChoice as int);
       }
       
@@ -175,13 +190,26 @@ class GameRepository {
       scores[bp] = (scores[bp] ?? 0) + runs;
     }
 
-    // Check if inning is over (out or 6 balls)
-    final inningOver = isOut || newBallsPlayed >= 6;
+    bool targetReached = false;
+    if (currentInningIdx == 1) {
+      final chasingPlayerScore = scores[battingPlayer] ?? 0;
+      final defendingPlayerScore = scores[bowlingPlayer] ?? 0;
+      if (chasingPlayerScore > defendingPlayerScore) {
+        targetReached = true;
+      }
+    }
+
+    // Increment the ball counter for the next ball
+    final currentBallCounter = data['ballCounter'] as int? ?? 0;
+    data['ballCounter'] = currentBallCounter + 1;
+
+    // Check if inning is over (out or 6 balls or target chased down)
+    final inningOver = isOut || newBallsPlayed >= 6 || targetReached;
 
     if (inningOver) {
       final nextInningIdx = currentInningIdx + 1;
 
-      if (nextInningIdx >= 5) {
+      if (nextInningIdx >= 2) {
         // Game over
         final p1Score = scores['player1'] ?? 0;
         final p2Score = scores['player2'] ?? 0;

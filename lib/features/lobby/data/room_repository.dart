@@ -48,6 +48,30 @@ class RoomRepository {
       return null;
     });
   }
+
+  /// Create a rematch room and store its code in the original room
+  Future<String> createRematchRoom(String originalRoomCode, PlayerModel host) async {
+    final roomCode = generateRoomCode();
+    final room = RoomModel(
+      roomCode: roomCode,
+      status: 'waiting',
+      createdAt: DateTime.now(),
+      isPrivate: true,
+      player1: host,
+    );
+
+    await _db.ref('rooms/$roomCode').set(room.toJson());
+    // Write rematch code to original room so the other player can find it
+    await _db.ref('rooms/$originalRoomCode/rematchRoomCode').set(roomCode);
+    return roomCode;
+  }
+
+  /// Watch for rematch code written by the other player
+  Stream<String?> watchRematchCode(String originalRoomCode) {
+    return _db.ref('rooms/$originalRoomCode/rematchRoomCode').onValue.map((event) {
+      return event.snapshot.value as String?;
+    });
+  }
 }
 
 @riverpod

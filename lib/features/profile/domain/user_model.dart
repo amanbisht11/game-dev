@@ -4,6 +4,7 @@ class UserModel {
   final String uid;
   final String name;
   final String country;
+  final String? favoriteTeam;
   final String avatarUrl;
   final int level;
   final int xp;
@@ -16,6 +17,7 @@ class UserModel {
     required this.uid,
     required this.name,
     required this.country,
+    this.favoriteTeam,
     required this.avatarUrl,
     this.level = 1,
     this.xp = 0,
@@ -30,6 +32,7 @@ class UserModel {
       uid: json['uid'] as String,
       name: json['name'] as String,
       country: json['country'] as String,
+      favoriteTeam: json['favoriteTeam'] as String?,
       avatarUrl: json['avatarUrl'] as String,
       level: json['level'] as int? ?? 1,
       xp: json['xp'] as int? ?? 0,
@@ -45,6 +48,7 @@ class UserModel {
       'uid': uid,
       'name': name,
       'country': country,
+      if (favoriteTeam != null) 'favoriteTeam': favoriteTeam,
       'avatarUrl': avatarUrl,
       'level': level,
       'xp': xp,

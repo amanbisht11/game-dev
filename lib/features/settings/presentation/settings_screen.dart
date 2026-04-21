@@ -28,36 +28,53 @@ class SettingsScreen extends ConsumerWidget {
                 profileAsync.when(
                   data: (profile) {
                     if (profile == null) return const SizedBox.shrink();
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceDark,
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => context.push('/profile'),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white10),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: AppColors.player1Blue.withValues(alpha: 0.3),
-                            child: Text(
-                              profile.name.isNotEmpty ? profile.name[0].toUpperCase() : '?',
-                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                            ),
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceDark,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white10),
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(profile.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                const SizedBox(height: 2),
-                                Text('Level ${profile.level} • ${profile.xp} XP', style: const TextStyle(color: AppColors.textGrey, fontSize: 12)),
-                              ],
-                            ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 32,
+                                backgroundColor: AppColors.player1Blue.withValues(alpha: 0.3),
+                                child: Text(
+                                  profile.name.isNotEmpty ? profile.name[0].toUpperCase() : '?',
+                                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(profile.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.accentGold.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        'Level ${profile.level} • ${profile.xp} XP',
+                                        style: const TextStyle(color: AppColors.accentGold, fontSize: 12, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right, color: AppColors.textGrey),
+                            ],
                           ),
-                          const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textGrey),
-                        ],
+                        ),
                       ),
                     );
                   },
