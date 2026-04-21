@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "314603290801",
+    "firebase_url": "https://hand-job-8757-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "hand-job-8757",
+    "storage_bucket": "hand-job-8757.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:314603290801:android:5727727a5a8fd67504a290",
+        "android_client_info": {
+          "package_name": "com.example.hand_job"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "314603290801-c0hdc5vvsg9dtal3j9d17qvglevvkt32.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.hand_job",
+            "certificate_hash": "46e2b67489cbbb7f3c602d1fcb55fb9313e739c3"
+          }
+        },
+        {
+          "client_id": "314603290801-2cguo5qlhireo8v5uv3hnq8e8j8tlek3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBp4V4sFCi8YXeZtCmw1CP2H-PDfUjP1wM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "314603290801-2cguo5qlhireo8v5uv3hnq8e8j8tlek3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
